@@ -1,9 +1,11 @@
-from data_processing import data_processing
+from pubmed_adr.data_processing import data_processing
 from nltk.tokenize import TweetTokenizer
 import collections
 from keras.preprocessing.sequence import pad_sequences
 import numpy as np
 from gensim.models import KeyedVectors
+from gensim.test.utils import datapath, get_tmpfile
+from gensim.scripts.glove2word2vec import glove2word2vec
 from keras.layers import Dense, Input, Lambda, merge, dot, Subtract
 from keras.layers.embeddings import Embedding
 from keras.layers.recurrent import GRU
@@ -15,7 +17,7 @@ from keras.layers.merge import Concatenate
 import keras.backend as K
 import os, re
 
-data_path = "H:/pubmed_adr/data/ADE-Corpus-V2/DRUG-AE.rel"
+data_path = "pubmed_adr/data/ADE-Corpus-V2/DRUG-AE.rel"
 final_data, idx2word, idx2label, maxlen, vocsize, nclasses, tok_senc_adr, train_lex, test_lex, train_y, test_y = data_processing(data_path)
 
 test_toks = []
@@ -109,13 +111,15 @@ charsize =  max(idx2char.keys()) + 1
 seed = 10
 np.random.seed(seed)
 
-glove_300d_path = 'H:/twitter_adr/embeddings/glove.840B.300d.txt'
+glove_300d_path = 'pubmed_adr/data/glove.6B.300d.txt'
+glove_300d_tmp_path = 'pubmed_adr/data/glove_w2v.6B.300d.txt'
+embed_dim = 300
+
 HIDDEN_DIM = 128
 NUM_EPOCHS = 10
 BATCH_SIZE = 16
 
 c2v = None
-embed_dim = 300
 char_embed_dim = 100
 
 def init_embedding_weights(i2w, w2vmodel):
@@ -186,7 +190,8 @@ def predict_score(model, x, toks, y, pred_dir, i2l, padlen, metafile=0, filepref
 
 # 加载词向量
 print('Loading word embeddings...')
-w2v = KeyedVectors.load_word2vec_format(glove_300d_path, binary=False, unicode_errors='ignore')
+_ = glove2word2vec(glove_300d_path, glove_300d_tmp_path)
+w2v = KeyedVectors.load_word2vec_format(glove_300d_tmp_path, binary=False, unicode_errors='ignore')
 print('word embeddings loading done!')
 
 # Build the model
@@ -257,7 +262,7 @@ print('Training...')
 history = model.fit([train_lex, pad_train_lex], train_y, batch_size=BATCH_SIZE, validation_split=0.1, epochs=NUM_EPOCHS)
 
 # 预测结果
-predir = 'H:/pubmed_adr/model_output/predictions'
+predir = 'pubmed_adr/model_output/predictions'
 fileprefix = 'embedding_level_attention_'
 
 scores = predict_score(model, [test_lex, pad_test_lex], test_toks, test_y, predir, idx2label,

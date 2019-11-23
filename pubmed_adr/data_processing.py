@@ -167,4 +167,4 @@ def data_processing(data_path):
     train_y = pad_adr[:4372]
     test_y = pad_adr[4372:]
             
-    return final_data, idx2word, maxlen, vocsize, nclasses, tok_senc_adr, train_lex, test_lex, train_y, test_y
+    return final_data, idx2word, idx2label, maxlen, vocsize, nclasses, tok_senc_adr, train_lex, test_lex, train_y, test_y
