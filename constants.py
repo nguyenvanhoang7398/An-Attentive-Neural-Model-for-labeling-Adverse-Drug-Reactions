@@ -1,0 +1,12 @@
+MODEL_OUTPUT_PATH = "output/extractor/model-{epoch:04d}.ckpt"
+INPUT_DOCS_PATH = "input_docs.txt"
+# EXTERNAL_VOCAB_PATH = "external_vocab.txt"
+EXTERNAL_VOCAB_PATH = None
+META_PATH = "output/meta.json"
+MIN_VOCAB_COUNT = 2
+MAX_VOCAB_SIZE = 1000000
+MIN_CHAR_VOCAB_COUNT = 2
+MAX_CHAR_VOCAB_SIZE = 1000000
+TRAIN_NUMBER = 4372
+glove_300d_path = 'pubmed_adr/data/glove.10k.300d.txt'
+glove_300d_tmp_path = 'pubmed_adr/data/glove_w2v.10k.300d.txt'

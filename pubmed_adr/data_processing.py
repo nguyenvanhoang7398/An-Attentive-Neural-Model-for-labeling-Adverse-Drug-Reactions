@@ -1,3 +1,8 @@
+import json
+from constants import *
+import utils
+
+
 def data_processing(data_path):
 
     from nltk.tokenize import TweetTokenizer
@@ -35,7 +40,8 @@ def data_processing(data_path):
     
     nested_idx = [1, 3, 4, 5, 9, 10, 11, 12, 13, 14, 15, 16, 19, 20, 21, 30, 31]  
     for idx in nested_idx:
-        heihei.append(b[idx])
+        if idx in b:
+            heihei.append(b[idx])
     
     for sample in raw_data:
         new_sample.append([sample[0], sample[3], sample[4], 'I-ADR', sample[2], sample[6], sample[7], sample[5], sample[5], sample[1]])
@@ -88,6 +94,7 @@ def data_processing(data_path):
     tok_senc_adr = []
     tok_span = []
     sub_tok_span = []
+
     for i in senc_adr:
         tok_text = tt.tokenize(i[0])
         tok_text = [w.lower() for w in tok_text]
@@ -117,8 +124,14 @@ def data_processing(data_path):
         for word in i[0]:
             wordcounts[word] += 1
     
-    words = [wordcount[0] for wordcount in wordcounts.most_common()]
-    word2idx = {w: i+1 for i, w in enumerate(words)}
+    words = [wordcount[0] for wordcount in wordcounts.most_common(MAX_VOCAB_SIZE)
+             if wordcount[1] >= MIN_VOCAB_COUNT]
+    if EXTERNAL_VOCAB_PATH is not None:
+        external_vocab = utils.load_text_as_list(EXTERNAL_VOCAB_PATH)
+        words = set(words).union(set(external_vocab))
+
+    # add 2 vocabs 'PAD' and 'UNK'
+    word2idx = {w: i+2 for i, w in enumerate(words)}
     
     labelcounts = collections.Counter()
     for l in labelset:
@@ -132,14 +145,17 @@ def data_processing(data_path):
     
     idx2label[0] = 'PAD'
     idx2word[0] = 'PAD'
+    idx2word[1] = 'UNK'
     
     vec_senc_adr = []
     vec_senc = []
     vec_adr = []
-    
+
+    # Need to save word2idx, idx2word, and max_len
     for i, j in zip(tok_senc_adr, all_labels):
-        vec_senc_adr.append([[word2idx[word] for word in i[0]], [label2idx[l] for l in j]])
-        vec_senc.append([word2idx[word] for word in i[0]])
+        token_idxs = [word2idx[word] if word in word2idx else 1 for word in i[0]]   # 'UNK' index is 1
+        vec_senc_adr.append([token_idxs, [label2idx[l] for l in j]])
+        vec_senc.append(token_idxs)
         vec_adr.append([label2idx[l] for l in j])
             
     
@@ -161,10 +177,17 @@ def data_processing(data_path):
 
     pad_adr = vectorize_set(pad_adr, maxlen, nclasses)
     
-    train_lex = pad_senc[:4372] # 4858 * 0.9 = 4372
-    test_lex = pad_senc[4372:]
+    train_lex = pad_senc[:TRAIN_NUMBER] # 4858 * 0.9 = 4372
+    test_lex = pad_senc[TRAIN_NUMBER:]
 
-    train_y = pad_adr[:4372]
-    test_y = pad_adr[4372:]
-            
-    return final_data, idx2word, idx2label, maxlen, vocsize, nclasses, tok_senc_adr, train_lex, test_lex, train_y, test_y
+    train_y = pad_adr[:TRAIN_NUMBER]
+    test_y = pad_adr[TRAIN_NUMBER:]
+
+    saved_data = {
+        "word2idx": word2idx,
+        "idx2word": idx2word,
+        "max_len": maxlen
+    }
+
+    return final_data, idx2word, idx2label, maxlen, vocsize, nclasses, tok_senc_adr, train_lex, test_lex, \
+           train_y, test_y, saved_data
